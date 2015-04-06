@@ -23,12 +23,12 @@ docker_debian_reset(){
 
 docker_debian_runFreshContainer(){
     docker_debian_reset
-    docker run -h $docker_container_name --name="$docker_container_name" -i -v $(pwd):/development:rw -t debian-build
+    docker run -h $docker_container_name --name="$docker_container_name" -i -v $(pwd):/development:ro -t debian-build
 }
 
 docker_debian_runFreshContainerInBackground(){
     docker_debian_reset
-    docker run -h $docker_container_name --name="$docker_container_name" -v $(pwd):/development:rw --detach=true -t debian-build
+    docker run -h $docker_container_name --name="$docker_container_name" -v $(pwd):/development:ro --detach=true -t debian-build
 }
 
 docker_debian_build_all(){
