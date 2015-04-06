@@ -1,0 +1,45 @@
+#!/bin/bash
+
+docker_container_name=debian-build
+
+docker_debian_exec(){
+    docker exec -it $docker_container_name "$@"
+}
+
+docker_debian_kill(){
+    echo "*info* kill eventually running container"
+    docker kill $docker_container_name >/dev/null
+}
+
+docker_debian_remove(){
+    echo "*info* remove container to begin plain"
+    docker rm $docker_container_name >/dev/null
+}
+
+docker_debian_reset(){
+    docker_debian_kill
+    docker_debian_remove
+}
+
+docker_debian_runFreshContainer(){
+    docker_debian_reset
+    docker run -h $docker_container_name --name="$docker_container_name" -i -v $(pwd):/development:rw -t debian-build
+}
+
+docker_debian_runFreshContainerInBackground(){
+    docker_debian_reset
+    docker run -h $docker_container_name --name="$docker_container_name" -v $(pwd):/development:rw --detach=true -t debian-build
+}
+
+docker_debian_build_all(){
+    docker_debian_runFreshContainerInBackground
+    docker_debian_exec bash -c 'mkdir -p /tmp/dev && cd /tmp/dev && cp -R /development/* .'
+    # install build dependencies
+    docker_debian_exec bash -c 'cd /tmp/dev && mk-build-deps -t "apt-get --no-install-recommends -y" && dpkg -i *_all.deb'
+    docker_debian_exec apt-get install -y --no-install-recommends -f
+
+    # build
+    docker_debian_exec bash -c 'cd /tmp/dev && dpkg-buildpackage -j4 -uc -us'
+}
+
+alias docker_remove_all_containers='docker ps -a | grep -v ^CONTAINER | awk "{print \$1}" | xargs --no-run-if-empty docker rm'
