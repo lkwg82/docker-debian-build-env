@@ -1,8 +1,5 @@
 # docker-debian-build-env
-a debian package build environment with docker
-
-this is meant to be a simple pbuilder replacement
-
+a debian package build environment with docker this is meant to be a simple pbuilder replacement
 
 # usage
 
