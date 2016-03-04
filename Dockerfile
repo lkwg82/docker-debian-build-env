@@ -15,4 +15,4 @@ RUN apt-get update \
 RUN mkdir -p /development
 WORKDIR /development
 
-ENTRYPOINT /bin/bash
+ENTRYPOINT /bin/bash -c 'while(true); do sleep 10; done'
