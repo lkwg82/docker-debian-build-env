@@ -1,45 +1,54 @@
 #!/bin/bash
 
-docker_container_name=debian-build
+set -x
+
+docker_container_name="lkwg82/docker-debian-build-env"
+docker_container_id_file=".docker_cid"
 
 docker_debian_exec(){
-    docker exec -it $docker_container_name "$@"
-}
-
-docker_debian_kill(){
-    echo "*info* kill eventually running container"
-    docker kill $docker_container_name >/dev/null
-}
-
-docker_debian_remove(){
-    echo "*info* remove container to begin plain"
-    docker rm $docker_container_name >/dev/null
+    if [ -f "${docker_container_id_file}" ]; then
+        local cid=$(cat ${docker_container_id_file})
+        docker exec -it ${cid} "$@"
+    else 
+        echo "missing cidfile, cannot execute '$@'"
+    fi
 }
 
 docker_debian_reset(){
-    docker_debian_kill
-    docker_debian_remove
-}
-
-docker_debian_runFreshContainer(){
-    docker_debian_reset
-    docker run -h $docker_container_name --name="$docker_container_name" -i -v $(pwd):/development:ro -t debian-build
+    if [ -f "${docker_container_id_file}" ]; then
+        local cid=$(cat ${docker_container_id_file})
+        docker rm -f ${cid}
+        rm ${docker_container_id_file}
+    fi
 }
 
 docker_debian_runFreshContainerInBackground(){
     docker_debian_reset
-    docker run -h $docker_container_name --name="$docker_container_name" -v $(pwd):/development:ro --detach=true -t debian-build
+    docker run --cidfile ${docker_container_id_file} -v "$(pwd):/development:ro" --detach=true ${docker_container_name}
+}
+
+_docker_export_the_build(){
+    local cid=$(cat ${docker_container_id_file})
+    docker cp ${cid}:/tmp .
+    rm -rf tmp/dev
+    cp tmp/* ..
+    rmdir tmp
 }
 
 docker_debian_build_all(){
     docker_debian_runFreshContainerInBackground
     docker_debian_exec bash -c 'mkdir -p /tmp/dev && cd /tmp/dev && cp -R /development/* .'
     # install build dependencies
+    
     docker_debian_exec bash -c 'cd /tmp/dev && mk-build-deps -t "apt-get --no-install-recommends -y" && dpkg -i *_all.deb'
-    docker_debian_exec apt-get install -y --no-install-recommends -f
+    docker_debian_exec bash -c 'apt-get install -y --no-install-recommends -f'
 
     # build
-    docker_debian_exec bash -c 'cd /tmp/dev && dpkg-buildpackage -j4 -uc -us'
+    #docker_debian_exec bash -c 'cd /tmp/dev && dpkg-buildpackage -j4 -uc -us'
+    docker_debian_exec bash -c 'cd /tmp/dev && git-buildpackage -S -sa --git-tag --git-sign-tags --git-no-create-orig'
+    
+    _docker_export_the_build
+    docker_debian_reset
 }
 
 alias docker_remove_all_containers='docker ps -a | grep -v ^CONTAINER | awk "{print \$1}" | xargs --no-run-if-empty docker rm'
