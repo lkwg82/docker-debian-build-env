@@ -5,8 +5,10 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         bash-completion \
+        debhelper \
         devscripts equivs \
-        dh-make dpkg-dev \
+        dh-make \
+        dpkg-dev \
         git \
         software-properties-common \
         python-software-properties \
